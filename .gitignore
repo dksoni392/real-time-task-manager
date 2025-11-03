@@ -1,0 +1,11 @@
+# Environment variables
+.env
+
+# Dependencies
+node_modules/
+
+# Compiled TypeScript output
+dist/
+
+# Logs
+npm-debug.log*
