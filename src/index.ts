@@ -1,10 +1,11 @@
 import express, { Express, Request, Response } from 'express';
 import dotenv from 'dotenv';
 import connectDB from './config/db';
+
+// Import Routes
 import authRoutes from './api/routes/auth.routes';
-import teamRoutes from './api/routes/team.routes'; // Import team routes
-// import projectRoutes from './api/routes/project.routes'; // Stub for next step
-// import taskRoutes from './api/routes/task.routes'; // Stub for next step
+import teamRoutes from './api/routes/team.routes'; // This now includes project & task routes!
+import taskRoutes from './api/routes/task.routes'; // For individual task updates
 
 dotenv.config();
 
@@ -23,9 +24,8 @@ app.get('/', (req: Request, res: Response) => {
 
 // === USE API ROUTES ===
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/teams', teamRoutes); // Plug in the team routes
-// app.use('/api/v1/projects', projectRoutes); // Stub for next step
-// app.use('/api/v1/tasks', taskRoutes); // Stub for next step
+app.use('/api/v1/tasks', taskRoutes); // For /api/v1/tasks/:taskId
+app.use('/api/v1/teams', teamRoutes); // For /api/v1/teams AND all nested routes
 
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);

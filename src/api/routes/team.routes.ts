@@ -6,26 +6,31 @@ import { CreateTeamDto, InviteMemberDto } from '../dtos/team.dto';
 import { checkTeamRole } from '../middlewares/rbac.middleware';
 import { TeamRole } from '../../models/teamMembership.model';
 
+// --- 1. IMPORT THE PROJECT ROUTER ---
+import projectRoutes from './project.routes';
+
 const router = Router();
 
 // === All team routes are protected ===
 router.use(protect);
 
 // GET /api/v1/teams
-// Get all teams the current user is a part of
 router.get('/', getMyTeams);
 
 // POST /api/v1/teams
-// Create a new team
 router.post('/', validationMiddleware(CreateTeamDto), createTeam);
 
 // POST /api/v1/teams/:teamId/invite
-// Invite a new member to a team
 router.post(
   '/:teamId/invite',
-  checkTeamRole([TeamRole.Admin]), // **RBAC IN ACTION!** Only Admins can invite
+  checkTeamRole([TeamRole.Admin]), 
   validationMiddleware(InviteMemberDto),
   inviteMember
 );
+
+// --- 2. THIS IS THE CRITICAL LINE YOU ARE LIKELY MISSING ---
+// This tells the team router to hand off any request
+// that matches "/:teamId/projects" to the projectRoutes file.
+router.use('/:teamId/projects', projectRoutes);
 
 export default router;
