@@ -7,8 +7,7 @@
     },
     {
       "src": "client/package.json",
-      "use": "@vercel/static-build",
-      "builds": ["npm run build"]
+      "use": "@vercel/static-build"
     }
   ],
   "rewrites": [
