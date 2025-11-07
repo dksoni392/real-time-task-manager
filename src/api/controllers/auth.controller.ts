@@ -1,14 +1,15 @@
 import { Request, Response } from 'express';
-import { User } from '../../models/user.model';
+import { User, UserRole } from '../../models/user.model';
 import generateToken from '../../utils/generateToken';
 import { RegisterUserDto, LoginUserDto } from '../dtos/auth.dto';
 import { Types } from 'mongoose'; // <-- Import Types for the assertion
+
 
 // @desc    Register a new user
 // @route   POST /api/v1/auth/register
 export const registerUser = async (req: Request, res: Response) => {
   try {
-    const { name, email, password } = req.body as RegisterUserDto;
+    const { name, email, password, masterKey } = req.body as RegisterUserDto;
 
     // 1. Check if user already exists
     const userExists = await User.findOne({ email });
@@ -16,24 +17,34 @@ export const registerUser = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // 2. Create new user
-    // The 'pre-save' hook in your model will hash the password
+    // === 2. MASTER KEY LOGIC ===
+    let userRole = UserRole.Member; // Default role
+
+    if (masterKey) {
+      if (masterKey === process.env.MASTER_KEY) {
+        userRole = UserRole.Admin; // Elevate to Super Admin
+      } else {
+        // They provided a key, but it was wrong.
+        return res.status(403).json({ message: 'Invalid Master Key' });
+      }
+    }
+    // === END OF LOGIC ===
+
+    // 3. Create new user with the determined role
     const user = await User.create({
       name,
       email,
       password,
+      role: userRole, // <-- Assign the role
     });
 
-    // 3. Respond with user data and token
+    // 4. Respond with user data and token
     if (user) {
-      // We don't want to send back the password, even hashed
       const userResponse = user.toObject();
       delete userResponse.password;
 
       res.status(201).json({
         ...userResponse,
-        // === THE FIX ===
-        // We assert the type because we know user._id is valid here
         token: generateToken(user._id as Types.ObjectId),
       });
     } else {

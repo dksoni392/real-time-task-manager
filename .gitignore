@@ -1,11 +1,31 @@
-# Environment variables
-.env
-
 # Dependencies
-node_modules/
+# Ignore node_modules in both root and client
+/node_modules/
+/client/node_modules/
 
-# Compiled TypeScript output
-dist/
+# Build Output
+# Ignore build folders for both backend and frontend
+/dist/
+/client/dist/
+
+# Environment Variables (CRITICAL)
+# Ignore all .env files, in all folders
+.env
+.env.local
+.env.*.local
+client/.env
+client/.env.local
+client/.env.*.local
 
 # Logs
 npm-debug.log*
+yarn-error.log*
+logs/
+
+# Vite build cache
+.vite/
+client/.vite/
+
+# OS-specific files
+.DS_Store
+Thumbs.db

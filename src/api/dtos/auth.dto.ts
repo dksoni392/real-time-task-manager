@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 
 // DTO for User Registration
 export class RegisterUserDto {
@@ -12,6 +12,10 @@ export class RegisterUserDto {
   @IsString()
   @MinLength(8, { message: 'Password must be at least 8 characters long' })
   password!: string;
+
+  @IsString()
+  @IsOptional() // <-- It's optional
+  masterKey?: string; 
 }
 
 // DTO for User Login
