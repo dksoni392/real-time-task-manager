@@ -2,12 +2,13 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
+import { SOCKET_URL } from '../config/config.js'; // <-- 1. IMPORT YOUR CONFIG
 import { useAuth } from './AuthContext';
 
 // const SOCKET_URL = 'http://localhost:3000';
 
 // To this:
-const SOCKET_URL = '/';
+// const SOCKET_URL = '/';
 
 const SocketContext = createContext(null);
 

@@ -1,6 +1,7 @@
 // client/src/context/AuthContext.jsx
 
 import { createContext, useContext, useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config/config.js'; // <-- 1. IMPORT YOUR CONFIG
 
 // The URL for your backend API
 // const API_URL = 'http://localhost:3000/api/v1';
@@ -33,7 +34,7 @@ export function AuthProvider({ children }) {
   // 4. The Login Function
   const login = async (email, password) => {
     // This is the same fetch call from your LoginPage
-    const response = await fetch(`${API_URL}/auth/login`, {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
