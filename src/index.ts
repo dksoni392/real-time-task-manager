@@ -1,3 +1,4 @@
+import 'reflect-metadata'; // 👈 REQUIRED for class-validator & typeorm decorators
 import express, { Express, Request, Response } from 'express';
 import dotenv from 'dotenv';
 import http from 'http';
