@@ -1,7 +1,7 @@
 {
   "name": "real-time-task-management-system",
   "version": "1.0.0",
-  "description": "",
+  "description": "A real-time task management system using Node.js, Express, Socket.io, and TypeScript.",
   "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -9,10 +9,20 @@
     "build": "tsc",
     "start": "node dist/index.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "express",
+    "typescript",
+    "socket.io",
+    "mongoose",
+    "real-time"
+  ],
+  "author": "Deepak Soni",
   "license": "ISC",
+  "engines": {
+    "node": "20.x"
+  },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "cors": "^2.8.5",
@@ -20,8 +30,7 @@
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.19.2",
-    "socket.io": "^4.7.5",
-    "typescript": "^5.4.5" 
+    "socket.io": "^4.7.5"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -29,7 +38,7 @@
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^20.14.2",
-    "bcryptjs": "^2.4.3",
-    "ts-node-dev": "^2.0.0"
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.4.5"
   }
 }
