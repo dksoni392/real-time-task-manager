@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import Modal from '../components/Modal';
+import { API_BASE_URL } from '../config/config.js'; // <-- 1. IMPORT YOUR CONFIG
 
 // --- Styles (Complete) ---
 const styles = {
@@ -23,10 +24,7 @@ export default function ProjectPage() {
   const { teamId } = useParams(); 
   const navigate = useNavigate();
   
-  // === THIS IS THE FIX ===
-  // Removed the trailing '_' from the destructuring
-  const { user, token } = useAuth();
-  // ========================
+  const { user, token } = useAuth(); // Corrected: removed typo
 
   const { socket, isConnected } = useSocket();
 
@@ -41,11 +39,13 @@ export default function ProjectPage() {
 
   const isAdmin = user && user.role === 'Admin';
 
-  // useEffect to fetch projects (this will now run)
+  // useEffect to fetch projects
   useEffect(() => {
     if (token) {
       setLoading(true);
-      fetch(`http://localhost:3000/api/v1/teams/${teamId}/projects`, {
+      // === 2. THIS IS THE FIX ===
+      // Use your config variable
+      fetch(`${API_BASE_URL}/api/v1/teams/${teamId}/projects`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       .then(res => {
@@ -57,7 +57,7 @@ export default function ProjectPage() {
         return res.json();
       })
       .then(data => { 
-        setProjects(data.projects || []); // Use data.projects, fallback to []
+        setProjects(data.projects || []); 
         setTeamRole(data.userRole); 
         setLoading(false); 
       })
@@ -66,13 +66,12 @@ export default function ProjectPage() {
         setError(err.message); 
         setLoading(false); 
       });
-    } else if (!user) {
-      // Only set loading to false if we're not waiting for the user object
+    } else if (user) { 
       setLoading(false);
     }
-  }, [token, teamId, user]); // Added 'user' as a dependency
+  }, [token, teamId, user]); 
 
-  // useEffect for socket 'project_created'
+  // ... (useEffect for socket 'project_created' remains the same) ...
   useEffect(() => {
     if (socket && isConnected) {
       const handleNewProject = (newProject) => {
@@ -89,7 +88,9 @@ export default function ProjectPage() {
   const handleCreateProject = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/teams/${teamId}/projects`, {
+      // === 3. THIS IS THE FIX ===
+      // Use your config variable
+      const res = await fetch(`${API_BASE_URL}/api/v1/teams/${teamId}/projects`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

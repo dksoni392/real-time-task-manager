@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import CreateTaskModal from '../components/CreateTaskModal';
-import EditTaskModal from '../components/EditTaskModal'; // We'll use this next
+import EditTaskModal from '../components/EditTaskModal';
+import { API_BASE_URL } from '../config/config.js'; // <-- 1. IMPORT YOUR CONFIG
 
 // --- Styles (Combined from all steps) ---
 const styles = {
@@ -130,9 +131,7 @@ function TaskCard({ task, user, userRole, onEdit, onDelete }) {
 export default function TaskPage() {
   const { projectId } = useParams();
   
-  // === THIS IS THE FIX ===
-  const { token, user } = useAuth(); // Removed the trailing '_'
-  // ========================
+  const { token, user } = useAuth(); // Corrected: removed typo
 
   const { socket, isConnected } = useSocket();
   const navigate = useNavigate(); 
@@ -152,7 +151,9 @@ export default function TaskPage() {
   useEffect(() => {
     if (token && user) {
       setLoading(true);
-      fetch(`http://localhost:3000/api/v1/projects/${projectId}/tasks`, {
+      // === 2. THIS IS THE FIX ===
+      // Use your config variable
+      fetch(`${API_BASE_URL}/api/v1/projects/${projectId}/tasks`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       .then(res => {
@@ -218,7 +219,9 @@ export default function TaskPage() {
       return;
     }
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/tasks/${task._id}`, {
+      // === 3. THIS IS THE FIX ===
+      // Use your config variable
+      const res = await fetch(`${API_BASE_URL}/api/v1/tasks/${task._id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

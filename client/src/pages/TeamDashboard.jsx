@@ -4,6 +4,7 @@ import { useSocket } from '../context/SocketContext';
 import { Link } from 'react-router-dom';
 import Modal from '../components/Modal';
 import InviteMemberModal from '../components/InviteMemberModal';
+import { API_BASE_URL } from '../config/config.js'; // Import your config
 
 // --- Styles (Complete) ---
 const styles = {
@@ -81,15 +82,15 @@ const styles = {
   },
   // --- Form Styles (for the modal) ---
   form: { display: 'flex', flexDirection: 'column', gap: '1rem' },
-  // We need to add formGroup and label styles
   formGroup: { display: 'flex', flexDirection: 'column', gap: '0.25rem' },
   label: { fontSize: '0.9rem', color: '#555' },
-  formInput: { padding: '10px', border: '1px solid #ccc', borderRadius: '4px' },
+  formInput: { padding: '10px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '1rem' },
   formTextarea: {
     padding: '10px',
     border: '1px solid #ccc',
     borderRadius: '4px',
     minHeight: '80px',
+    fontSize: '1rem',
   },
   formButton: {
     padding: '10px',
@@ -98,12 +99,16 @@ const styles = {
     border: 'none',
     borderRadius: '5px',
     cursor: 'pointer',
-    marginTop: '1rem', // Added margin
+    fontSize: '1rem',
+    marginTop: '1rem',
   },
 };
 
 export default function TeamDashboard() {
+  // === THIS IS THE FIX for the typo ===
   const { user, logout, token } = useAuth();
+  // =====================================
+
   const { socket, isConnected } = useSocket();
   const [memberships, setMemberships] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -118,9 +123,11 @@ export default function TeamDashboard() {
 
   // Effect to fetch teams
   useEffect(() => {
+    // This 'if (token)' will now work
     if (token) {
       setLoading(true);
-      fetch('http://localhost:3000/api/v1/teams', {
+      setError(null);
+      fetch(`${API_BASE_URL}/api/v1/teams`, {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then((res) => {
@@ -135,8 +142,10 @@ export default function TeamDashboard() {
           setError(err.message);
           setLoading(false);
         });
+    } else {
+      setLoading(false); // No token, so not loading
     }
-  }, [token]);
+  }, [token]); // This effect re-runs when the token loads
 
   // Effect to listen for real-time socket events
   useEffect(() => {
@@ -144,7 +153,8 @@ export default function TeamDashboard() {
       // Handles when this user is added to a new team
       const handleNewTeam = (newTeam) => {
         alert(`You've been added to a new team: ${newTeam.name}. Refreshing list...`);
-        window.location.reload();
+        // A simple way to get all new data (role, member count)
+        window.location.reload(); 
       };
       
       // Handles when another user joins a team this user is in
@@ -172,7 +182,7 @@ export default function TeamDashboard() {
   const handleCreateTeam = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/teams`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/teams`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -185,7 +195,8 @@ export default function TeamDashboard() {
       });
       if (!res.ok) throw new Error('Failed to create team');
       const newTeam = await res.json();
-      setMemberships((prev) => [...prev, { team: newTeam, role: 'Admin', memberCount: 1 }]);
+      // The backend will emit 'added_to_team' to us, so our
+      // socket listener will handle the state update.
       setNewTeamName('');
       setNewTeamDesc('');
       setShowCreateTeam(false);
@@ -197,7 +208,6 @@ export default function TeamDashboard() {
   return (
     <>
       <div style={styles.dashboard}>
-        {/* === HEADER (unchanged) === */}
         <header style={styles.header}>
           <h1>Welcome, {user?.name || 'User'}!</h1>
           <div style={styles.headerActions}>
@@ -221,7 +231,7 @@ export default function TeamDashboard() {
 
         <h2>My Teams</h2>
 
-        {/* === TEAM LIST (unchanged) === */}
+        {/* === THIS IS THE RESTORED TEAM LISTING LOGIC === */}
         {loading && <p>Loading your teams...</p>}
         {error && <p style={{ color: 'red' }}>{error}</p>}
         
@@ -255,6 +265,8 @@ export default function TeamDashboard() {
             <p>You are not a part of any teams yet.</p>
           )}
         </div>
+        {/* === END OF RESTORED LOGIC === */}
+
       </div>
 
       {/* --- MODALS --- */}
