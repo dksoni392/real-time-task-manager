@@ -109,6 +109,7 @@ if (PROD_URL) {
 app.use(cors({
   origin: allowedOrigins,
   credentials: true,
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS']
 }));
 
 // === 3. Create the HTTP server and Socket.IO server ===
