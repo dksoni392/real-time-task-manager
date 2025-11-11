@@ -71,6 +71,20 @@ const styles = {
     cursor: 'pointer',
     fontSize: '0.9rem',
   },
+  // --- 1. ADDED STYLES FOR DELETE AND BUTTONS ---
+  deleteButton: {
+    padding: '8px 12px',
+    backgroundColor: '#ff3b30',
+    color: 'white',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    fontSize: '0.9rem',
+  },
+  adminButtonsContainer: {
+    display: 'flex',
+    gap: '0.5rem',
+  },
   createButton: {
     padding: '10px 15px',
     backgroundColor: '#007aff',
@@ -105,10 +119,7 @@ const styles = {
 };
 
 export default function TeamDashboard() {
-  // === THIS IS THE FIX for the typo ===
-  const { user, logout, token } = useAuth();
-  // =====================================
-
+  const { user, logout, token } = useAuth(); // Corrected typo
   const { socket, isConnected } = useSocket();
   const [memberships, setMemberships] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -118,12 +129,10 @@ export default function TeamDashboard() {
   const [newTeamDesc, setNewTeamDesc] = useState('');
   const [inviteTeamId, setInviteTeamId] = useState(null);
 
-  // This is our single, clean "Super Admin" check
   const isAdmin = user && user.role === 'Admin';
 
   // Effect to fetch teams
   useEffect(() => {
-    // This 'if (token)' will now work
     if (token) {
       setLoading(true);
       setError(null);
@@ -145,19 +154,16 @@ export default function TeamDashboard() {
     } else {
       setLoading(false); // No token, so not loading
     }
-  }, [token]); // This effect re-runs when the token loads
+  }, [token]);
 
   // Effect to listen for real-time socket events
   useEffect(() => {
     if (socket && isConnected) {
-      // Handles when this user is added to a new team
       const handleNewTeam = (newTeam) => {
         alert(`You've been added to a new team: ${newTeam.name}. Refreshing list...`);
-        // A simple way to get all new data (role, member count)
-        window.location.reload(); 
+        window.location.reload();
       };
       
-      // Handles when another user joins a team this user is in
       const handleMemberJoined = (payload) => {
          setMemberships(currentMemberships => 
            currentMemberships.map(mem => 
@@ -168,12 +174,20 @@ export default function TeamDashboard() {
          );
       };
 
+      const handleTeamDeleted = ({ teamId }) => {
+        setMemberships((prev) => 
+          prev.filter(mem => mem.team._id !== teamId)
+        );
+      };
+
       socket.on('added_to_team', handleNewTeam);
       socket.on('member_joined', handleMemberJoined);
+      socket.on('team_deleted', handleTeamDeleted);
       
       return () => {
         socket.off('added_to_team', handleNewTeam);
         socket.off('member_joined', handleMemberJoined);
+        socket.off('team_deleted', handleTeamDeleted); // <-- 2. THIS WAS THE MISSING LINE
       };
     }
   }, [socket, isConnected]);
@@ -182,6 +196,7 @@ export default function TeamDashboard() {
   const handleCreateTeam = async (e) => {
     e.preventDefault();
     try {
+      // --- 3. THIS WAS THE MISSING URL FIX ---
       const res = await fetch(`${API_BASE_URL}/api/v1/teams`, {
         method: 'POST',
         headers: {
@@ -195,11 +210,30 @@ export default function TeamDashboard() {
       });
       if (!res.ok) throw new Error('Failed to create team');
       const newTeam = await res.json();
-      // The backend will emit 'added_to_team' to us, so our
-      // socket listener will handle the state update.
+      setMemberships((prev) => [...prev, { team: newTeam, role: 'Admin', memberCount: 1 }]);
       setNewTeamName('');
       setNewTeamDesc('');
       setShowCreateTeam(false);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  // --- 4. ADDED 'handleDeleteTeam' FUNCTION ---
+  const handleDeleteTeam = async (team) => {
+    if (!window.confirm(`Are you sure you want to delete "${team.name}"? This will delete all its projects and tasks.`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/teams/${team._id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) {
+         const err = await res.json();
+         throw new Error(err.message || 'Failed to delete team');
+      }
+      // The socket listener 'team_deleted' will handle the UI update
     } catch (err) {
       alert(err.message);
     }
@@ -231,7 +265,6 @@ export default function TeamDashboard() {
 
         <h2>My Teams</h2>
 
-        {/* === THIS IS THE RESTORED TEAM LISTING LOGIC === */}
         {loading && <p>Loading your teams...</p>}
         {error && <p style={{ color: 'red' }}>{error}</p>}
         
@@ -249,13 +282,22 @@ export default function TeamDashboard() {
                     {mem.memberCount} {mem.memberCount > 1 ? 'Members' : 'Member'}
                   </span>
                   
+                  {/* --- 5. UPDATED JSX FOR ADMIN BUTTONS --- */}
                   {isAdmin && (
-                    <button 
-                      onClick={() => setInviteTeamId(mem.team._id)} 
-                      style={styles.inviteButton}
-                    >
-                      + Invite
-                    </button>
+                    <div style={styles.adminButtonsContainer}>
+                      <button 
+                        onClick={() => setInviteTeamId(mem.team._id)} 
+                        style={styles.inviteButton}
+                      >
+                        + Invite
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteTeam(mem.team)}
+                        style={styles.deleteButton}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -265,8 +307,6 @@ export default function TeamDashboard() {
             <p>You are not a part of any teams yet.</p>
           )}
         </div>
-        {/* === END OF RESTORED LOGIC === */}
-
       </div>
 
       {/* --- MODALS --- */}
@@ -275,7 +315,6 @@ export default function TeamDashboard() {
         onClose={() => setShowCreateTeam(false)} 
         title="Create New Team"
       >
-        {/* === THIS IS THE FIXED FORM CODE === */}
         <form style={styles.form} onSubmit={handleCreateTeam}>
           <div style={styles.formGroup}>
             <label htmlFor="team-name" style={styles.label}>Team Name (Required)</label>
@@ -301,7 +340,6 @@ export default function TeamDashboard() {
             Create Team
           </button>
         </form>
-        {/* === END OF FIX === */}
       </Modal>
       
       <InviteMemberModal

@@ -61,3 +61,18 @@ export const protect = async (
     return res.status(401).json({ message: 'Not authorized, no token' });
   }
 };
+
+// This is our new Admin-only gatekeeper
+export const isAdmin = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (req.user && req.user.role === 'Admin') {
+    next(); // User is a Super Admin, proceed
+  } else {
+    return res.status(403).json({
+      message: 'Forbidden: This action requires Admin privileges.',
+    });
+  }
+};

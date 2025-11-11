@@ -1,6 +1,53 @@
 import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 
-// DTO for User Registration
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     RegisterUserDto:
+ *       type: object
+ *       required:
+ *         - name
+ *         - email
+ *         - password
+ *       properties:
+ *         name:
+ *           type: string
+ *           description: The user's full name.
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: The user's email address.
+ *         password:
+ *           type: string
+ *           format: password
+ *           description: The user's password (min 8 characters).
+ *         masterKey:
+ *           type: string
+ *           description: Optional secret key to register as an Admin.
+ *       example:
+ *         name: John Doe
+ *         email: john.doe@example.com
+ *         password: password123
+ *
+ *     LoginUserDto:
+ *       type: object
+ *       required:
+ *         - email
+ *         - password
+ *       properties:
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: The user's email address.
+ *         password:
+ *           type: string
+ *           format: password
+ *           description: The user's password.
+ *       example:
+ *         email: admin@example.com
+ *         password: password123
+ */
 export class RegisterUserDto {
   @IsString()
   @MinLength(2)

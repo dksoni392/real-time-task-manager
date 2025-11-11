@@ -5,6 +5,7 @@ import { logActivity } from '../../services/activity.service';
 import { Types } from 'mongoose';
 import { Server } from 'socket.io'; // <-- 1. IMPORT Server from socket.io
 import { TeamMembership } from '../../models/teamMembership.model'; // <-- Make sure this is imported
+import { Task } from '../../models/task.model';
 
 // @desc    Create a new project within a team
 // @route   POST /api/v1/teams/:teamId/projects
@@ -77,6 +78,35 @@ export const getProjectsByTeam = async (req: Request, res: Response) => {
       projects: projects,
     });
     
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// @desc    Delete a project (Admin Only)
+// @route   DELETE /api/v1/projects/:projectId
+export const deleteProject = async (req: Request, res: Response) => {
+  try {
+    const { projectId } = req.params;
+
+    // 1. Find the project to get the teamId for the socket event
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+    const teamId = project.team.toString();
+
+    // 2. Delete all tasks associated with the project
+    await Task.deleteMany({ project: projectId });
+
+    // 3. Delete the project itself
+    await Project.findByIdAndDelete(projectId);
+
+    // 4. Emit a real-time event to the team room
+    const io: Server = req.app.get('socketio');
+    io.to(teamId).emit('project_deleted', { projectId: projectId, teamId: teamId });
+
+    res.status(200).json({ message: 'Project deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

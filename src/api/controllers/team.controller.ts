@@ -9,6 +9,8 @@ import { CreateTeamDto, InviteMemberDto } from '../dtos/team.dto';
 import { logActivity } from '../../services/activity.service';
 import { Types } from 'mongoose';
 import { Server } from 'socket.io'; 
+import { Project } from '../../models/project.model';
+import { Task } from '../../models/task.model';
 
 // @desc    Create a new team
 // @route   POST /api/v1/teams
@@ -169,6 +171,47 @@ export const getMyTeams = async (req: Request, res: Response) => {
     );
 
     res.status(200).json(teamsData);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// @desc    Delete a team (Admin Only)
+// @route   DELETE /api/v1/teams/:teamId
+export const deleteTeam = async (req: Request, res: Response) => {
+  try {
+    const { teamId } = req.params;
+
+    // 1. Find all projects in the team
+    const projects = await Project.find({ team: teamId });
+    const projectIds = projects.map((p) => p._id);
+
+    // 2. Delete all tasks in all those projects
+    await Task.deleteMany({ project: { $in: projectIds } });
+
+    // 3. Delete all projects in the team
+    await Project.deleteMany({ team: teamId });
+
+    // 4. Delete all memberships for the team
+    await TeamMembership.deleteMany({ team: teamId });
+
+    // 5. Delete the team itself
+    const team = await Team.findByIdAndDelete(teamId);
+
+    if (!team) {
+      return res.status(404).json({ message: 'Team not found' });
+    }
+
+    // 6. Emit a real-time event to all team members
+    const io: Server = req.app.get('socketio');
+    const teamRoom = team.id.toString();
+    io.to(teamRoom).emit('team_deleted', { teamId: team._id });
+
+    // Also notify the admin who deleted it
+    const personalRoom = (req.user!._id as Types.ObjectId).toString();
+    io.to(personalRoom).emit('team_deleted', { teamId: team._id });
+
+    res.status(200).json({ message: 'Team deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

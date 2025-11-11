@@ -86,6 +86,7 @@ import authRoutes from './api/routes/auth.routes';
 import teamRoutes from './api/routes/team.routes';
 import taskRoutes from './api/routes/task.routes';
 import projectApiRoutes from './api/routes/projectApi.routes';
+import { setupSwagger } from './config/swagger'; // <-- 1. IMPORT SWAGGER
 
 dotenv.config();
 
@@ -128,6 +129,7 @@ app.use(express.json());
 // Make 'io' accessible to our controllers
 app.set('socketio', io);
 
+setupSwagger(app);
 // === 5. API ROUTES ===
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/tasks', taskRoutes);

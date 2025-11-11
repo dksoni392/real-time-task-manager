@@ -44,8 +44,7 @@ export const registerUser = async (req: Request, res: Response) => {
       delete userResponse.password;
 
       res.status(201).json({
-        ...userResponse,
-        token: generateToken(user._id as Types.ObjectId),
+        userResponse
       });
     } else {
       res.status(400).json({ message: 'Invalid user data' });
