@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import CreateTaskModal from '../components/CreateTaskModal';
 import EditTaskModal from '../components/EditTaskModal';
-import { API_BASE_URL } from '../config/config.js';
+import { API_BASE_URL } from '../config/config.js'; // <-- 1. IMPORT YOUR CONFIG
 
 // --- Styles (Combined from all steps) ---
 const styles = {
@@ -67,13 +67,18 @@ const styles = {
 };
 
 // --- TaskCard Component (This is the full, correct version) ---
-function TaskCard({ task, user, onEdit, onDelete }) {
-  // 1. Check if user is the Super Admin
-  const isAdmin = user && user.role === 'Admin';
-  
-  // 2. Check if this task is assigned to the logged-in user
+function TaskCard({ task, user, userRole, onEdit, onDelete }) {
   const isAssignedToMe = user._id === task.assignee?._id;
   
+  // Use the global 'Admin' role OR the contextual 'Team Admin' role
+  const isAdmin = (user && user.role === 'Admin') || userRole === 'Admin';
+  
+  // A member can edit status if they are assigned
+  const canEditStatus = isAdmin || (userRole === 'Member' && isAssignedToMe);
+  
+  // Only an Admin can fully edit
+  const canEditTask = isAdmin;
+
   const handleChangeStatus = () => {
     alert(`(WIP) Change status for: ${task.title}`);
   };
@@ -98,11 +103,14 @@ function TaskCard({ task, user, onEdit, onDelete }) {
       </div>
       <p>{task.description || 'No description'}</p>
       
-      {/* --- 3. THIS IS THE FIXED BUTTON LOGIC --- */}
       <div style={styles.taskActions}>
-        {isAdmin ? (
-          // --- ADMIN FLOW ---
-          // Admins see "Edit" and "Delete"
+        {canEditStatus && !isAdmin && (
+          <button onClick={handleChangeStatus} style={styles.button('secondary')}>
+            Change Status
+          </button>
+        )}
+        
+        {canEditTask && (
           <>
             <button onClick={() => onEdit(task)} style={styles.button('primary')}>
               Edit
@@ -111,14 +119,6 @@ function TaskCard({ task, user, onEdit, onDelete }) {
               Delete
             </button>
           </>
-        ) : (
-          // --- MEMBER FLOW ---
-          // Members *only* see "Change Status" if they are assigned
-          isAssignedToMe && (
-            <button onClick={handleChangeStatus} style={styles.button('secondary')}>
-              Change Status
-            </button>
-          )
         )}
       </div>
     </div>
@@ -130,7 +130,9 @@ function TaskCard({ task, user, onEdit, onDelete }) {
 // --- Main Page Component ---
 export default function TaskPage() {
   const { projectId } = useParams();
-  const { token, user } = useAuth(); 
+  
+  const { token, user } = useAuth(); // Corrected: removed typo
+
   const { socket, isConnected } = useSocket();
   const navigate = useNavigate(); 
 
@@ -140,15 +142,17 @@ export default function TaskPage() {
   const [error, setError] = useState(null);
   
   const [showCreateTask, setShowCreateTask] = useState(false);
-  const [editingTask, setEditingTask] = useState(null); 
+  const [editingTask, setEditingTask] = useState(null); // For the edit modal
 
-  // This is our one "Super Admin" check
   const isAdmin = user && user.role === 'Admin';
+  const isTeamAdmin = userRole === 'Admin';
 
   // Effect to fetch ALL page data (tasks + role)
   useEffect(() => {
     if (token && user) {
       setLoading(true);
+      // === 2. THIS IS THE FIX ===
+      // Use your config variable
       fetch(`${API_BASE_URL}/api/v1/projects/${projectId}/tasks`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -174,21 +178,14 @@ export default function TaskPage() {
     }
   }, [token, projectId, user]);
 
-  // === THIS IS THE FIX FOR REAL-TIME UPDATES ===
   // Effect to listen for real-time socket events
   useEffect(() => {
     if (socket && isConnected) {
-      
-      // --- A task was created ---
       const onTaskCreated = (newTask) => {
         if (newTask.project === projectId) {
-          // Use the "functional update" form of setState.
-          // This guarantees we always have the latest 'prevTasks'
           setTasks((prevTasks) => [newTask, ...prevTasks]);
         }
       };
-      
-      // --- A task was updated ---
       const onTaskUpdated = (updatedTask) => {
         if (updatedTask.project === projectId) {
           setTasks((prevTasks) => 
@@ -198,27 +195,23 @@ export default function TaskPage() {
           );
         }
       };
-      
-      // --- A task was deleted ---
       const onTaskDeleted = ({ taskId }) => {
         setTasks((prevTasks) => 
           prevTasks.filter(task => task._id !== taskId)
         );
       };
 
-      // --- Subscribe to events ---
       socket.on('task_created', onTaskCreated);
       socket.on('task_updated', onTaskUpdated);
       socket.on('task_deleted', onTaskDeleted);
 
       return () => {
-        // --- Unsubscribe on cleanup ---
         socket.off('task_created', onTaskCreated);
         socket.off('task_updated', onTaskUpdated);
         socket.off('task_deleted', onTaskDeleted);
       };
     }
-  }, [socket, isConnected, projectId]); // Dependency array is correct
+  }, [socket, isConnected, projectId]);
 
   // Function to handle DELETE
   const handleDeleteTask = async (task) => {
@@ -226,16 +219,15 @@ export default function TaskPage() {
       return;
     }
     try {
+      // === 3. THIS IS THE FIX ===
+      // Use your config variable
       const res = await fetch(`${API_BASE_URL}/api/v1/tasks/${task._id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Failed to delete task');
-      }
+      if (!res.ok) throw new Error('Failed to delete task');
       // Our 'task_deleted' socket listener will handle removing it from the UI.
     } catch (err) {
       alert(err.message);
@@ -249,8 +241,8 @@ export default function TaskPage() {
           <h2>Tasks</h2>
           <div style={styles.headerActions}>
             
-            {/* Show button ONLY if user is Super Admin */}
-            {isAdmin && (
+            {/* Show button if user is Super Admin OR this team's Admin */}
+            {(isAdmin || isTeamAdmin) && (
               <button onClick={() => setShowCreateTask(true)} style={styles.createButton}>
                 + New Task
               </button>
@@ -266,15 +258,14 @@ export default function TaskPage() {
         {error && <p style={{ color: 'red' }}>{error}</p>}
         
         <div style={styles.taskList}>
-          {!loading && user && Array.isArray(tasks) && tasks.map((task) => (
+          {!loading && user && userRole && Array.isArray(tasks) && tasks.map((task) => (
             <TaskCard 
               key={task._id} 
               task={task} 
               user={user} 
-              // We no longer need to pass userRole
-              // userRole={userRole} 
-              onEdit={setEditingTask} 
-              onDelete={handleDeleteTask} 
+              userRole={userRole}
+              onEdit={setEditingTask} // Pass the function
+              onDelete={handleDeleteTask} // Pass the function
             />
           ))}
           {!loading && Array.isArray(tasks) && tasks.length === 0 && (
